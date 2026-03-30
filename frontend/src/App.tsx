@@ -21,6 +21,8 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
   { label: 'JavaScript', value: 'javascript', monaco: 'javascript' },
 ]
 
+const SKELETON_ROW_COUNT = 15
+
 const LOCAL_FALLBACK_PROBLEMS: Problem[] = [
   {
     id: 1,
@@ -309,9 +311,31 @@ function ProblemBoard() {
     return (
       <main className="problemset-page">
         <header className="problemset-header">
-          <h1>Problemset</h1>
-          <p>Loading problems...</p>
+          <div>
+            <p className="eyebrow">Code Arena</p>
+            <h1>Problems</h1>
+            <p>Loading problems...</p>
+          </div>
         </header>
+
+        <section className="problem-table">
+          <div className="table-head">
+            <span>Title</span>
+            <span>Difficulty</span>
+            <span>Acceptance</span>
+            <span>Topics</span>
+          </div>
+
+          {Array.from({ length: SKELETON_ROW_COUNT }).map((_, index) => (
+            <div className="table-row skeleton-row" key={`skeleton-${index}`}>
+              <span className="skeleton-block skeleton-title" />
+              <span className="skeleton-block skeleton-difficulty" />
+              <span className="skeleton-block skeleton-acceptance" />
+              <span className="skeleton-block skeleton-tags" />
+            </div>
+          ))}
+        </section>
+
         <AppFooter />
       </main>
     )

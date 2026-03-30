@@ -102,6 +102,49 @@ select {
   background: rgba(159, 180, 218, 0.12);
 }
 
+.skeleton-row {
+  cursor: default;
+}
+
+.skeleton-row:hover {
+  background: transparent;
+}
+
+.skeleton-block {
+  display: inline-block;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(123, 145, 179, 0.18) 25%, rgba(123, 145, 179, 0.35) 50%, rgba(123, 145, 179, 0.18) 75%);
+  background-size: 220% 100%;
+  animation: shimmer 1.25s linear infinite;
+}
+
+.skeleton-title {
+  width: 78%;
+  height: 14px;
+}
+
+.skeleton-difficulty {
+  width: 70%;
+}
+
+.skeleton-acceptance {
+  width: 68%;
+}
+
+.skeleton-tags {
+  width: 85%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .title-cell {
   font-weight: 600;
 }
