@@ -1,4 +1,17 @@
-const PROBLEM_TESTS = {
+type Primitive = string | number | boolean
+
+type TestCase = Record<string, Primitive | Primitive[] | Primitive[][]>
+
+type ProblemTestBucket = {
+  run: TestCase[]
+  submit: TestCase[]
+}
+
+type LanguageConfig = {
+  judge0LanguageId: number
+}
+
+export const PROBLEM_TESTS: Record<number, ProblemTestBucket> = {
   1: {
     run: [
       { nums: [2, 7, 11, 15], target: 9, expected: [0, 1] },
@@ -43,14 +56,9 @@ const PROBLEM_TESTS = {
   },
 }
 
-const LANGUAGE_CONFIG = {
+export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
   javascript: { judge0LanguageId: 63 },
   python: { judge0LanguageId: 71 },
   java: { judge0LanguageId: 62 },
   cpp: { judge0LanguageId: 54 },
-}
-
-module.exports = {
-  PROBLEM_TESTS,
-  LANGUAGE_CONFIG,
 }

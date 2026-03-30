@@ -1,7 +1,17 @@
-const { runAgainstTests } = require('../services/judgeService')
-const { Submission } = require('../models/submissionModel')
-const { Problem } = require('../models/problemModel')
-const { SEEDED_PROBLEMS } = require('../constants/problemSeed')
+import type { Request, Response } from 'express'
+import { SEEDED_PROBLEMS } from '../constants/problemSeed'
+import { Problem } from '../models/problemModel'
+import { Submission } from '../models/submissionModel'
+import { runAgainstTests } from '../services/judgeService'
+import type { AuthenticatedRequest } from '../types/auth'
+
+type SubmissionStatusShape = {
+  problemId: number
+  solved: boolean
+  submissions: number
+  lastStatus: string
+  lastSubmittedAt?: Date
+}
 
 async function ensureProblemsSeeded() {
   const count = await Problem.countDocuments()
@@ -34,19 +44,24 @@ async function ensureProblemsSeeded() {
   }
 }
 
-async function getProblems(_req, res) {
+export async function getProblems(_req: Request, res: Response) {
   try {
     await ensureProblemsSeeded()
     const problems = await Problem.find({}).sort({ problemId: 1 }).lean()
     return res.status(200).json({ problems })
   } catch (error) {
-    return res.status(500).json({ error: error.message })
+    const message = error instanceof Error ? error.message : 'Failed to fetch problems'
+    return res.status(500).json({ error: message })
   }
 }
 
-async function runCode(req, res) {
+export async function runCode(req: Request, res: Response) {
   try {
-    const { problemId, language, code } = req.body
+    const { problemId, language, code } = req.body as {
+      problemId?: number | string
+      language?: string
+      code?: string
+    }
 
     if (!problemId || !language || !code) {
       return res.status(400).json({ error: 'problemId, language and code are required' })
@@ -61,16 +76,25 @@ async function runCode(req, res) {
 
     return res.status(200).json(result)
   } catch (error) {
-    return res.status(500).json({ error: error.message })
+    const message = error instanceof Error ? error.message : 'Failed to run code'
+    return res.status(500).json({ error: message })
   }
 }
 
-async function submitCode(req, res) {
+export async function submitCode(req: AuthenticatedRequest, res: Response) {
   try {
-    const { problemId, language, code } = req.body
+    const { problemId, language, code } = req.body as {
+      problemId?: number | string
+      language?: string
+      code?: string
+    }
 
     if (!problemId || !language || !code) {
       return res.status(400).json({ error: 'problemId, language and code are required' })
+    }
+
+    if (!req.user?.userId) {
+      return res.status(401).json({ error: 'Authentication required' })
     }
 
     const result = await runAgainstTests({
@@ -94,17 +118,22 @@ async function submitCode(req, res) {
 
     return res.status(200).json(result)
   } catch (error) {
-    return res.status(500).json({ error: error.message })
+    const message = error instanceof Error ? error.message : 'Failed to submit code'
+    return res.status(500).json({ error: message })
   }
 }
 
-async function getMyProblemStatus(req, res) {
+export async function getMyProblemStatus(req: AuthenticatedRequest, res: Response) {
   try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
     const submissions = await Submission.find({ userId: req.user.userId })
       .sort({ createdAt: -1 })
       .lean()
 
-    const statusByProblem = {}
+    const statusByProblem: Record<string, SubmissionStatusShape> = {}
 
     for (const submission of submissions) {
       const key = String(submission.problemId)
@@ -124,17 +153,9 @@ async function getMyProblemStatus(req, res) {
       }
     }
 
-    return res.status(200).json({
-      statusByProblem,
-    })
+    return res.status(200).json({ statusByProblem })
   } catch (error) {
-    return res.status(500).json({ error: error.message })
+    const message = error instanceof Error ? error.message : 'Failed to fetch status'
+    return res.status(500).json({ error: message })
   }
-}
-
-module.exports = {
-  getProblems,
-  runCode,
-  submitCode,
-  getMyProblemStatus,
 }

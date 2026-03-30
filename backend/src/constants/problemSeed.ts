@@ -1,3 +1,22 @@
+type ProblemTemplate = {
+  cpp: string
+  java: string
+  python: string
+  javascript: string
+}
+
+type SeededProblem = {
+  problemId: number
+  title: string
+  difficulty: 'Easy' | 'Medium' | 'Hard'
+  acceptance: string
+  tags: string[]
+  statement: string
+  examples: Array<{ input: string; output: string }>
+  constraints: string[]
+  templates: ProblemTemplate
+}
+
 const QUESTION_TITLES = [
   'Create Hello World Function',
   'Counter',
@@ -32,39 +51,12 @@ const QUESTION_TITLES = [
 ]
 
 const ACCEPTANCE_RATES = [
-  '86.2%',
-  '78.4%',
-  '73.1%',
-  '70.6%',
-  '75.8%',
-  '74.2%',
-  '69.5%',
-  '67.9%',
-  '82.1%',
-  '76.3%',
-  '58.7%',
-  '81.9%',
-  '72.4%',
-  '65.1%',
-  '63.8%',
-  '61.7%',
-  '57.3%',
-  '60.2%',
-  '55.8%',
-  '79.2%',
-  '74.9%',
-  '77.4%',
-  '62.5%',
-  '72.6%',
-  '59.4%',
-  '56.1%',
-  '58.6%',
-  '53.7%',
-  '64.4%',
-  '52.3%',
+  '86.2%', '78.4%', '73.1%', '70.6%', '75.8%', '74.2%', '69.5%', '67.9%', '82.1%', '76.3%',
+  '58.7%', '81.9%', '72.4%', '65.1%', '63.8%', '61.7%', '57.3%', '60.2%', '55.8%', '79.2%',
+  '74.9%', '77.4%', '62.5%', '72.6%', '59.4%', '56.1%', '58.6%', '53.7%', '64.4%', '52.3%',
 ]
 
-const PROBLEM_DETAILS = {
+const PROBLEM_DETAILS: Record<string, { statement: string; examples: Array<{ input: string; output: string }>; constraints: string[] }> = {
   'Create Hello World Function': {
     statement: 'Return a function that always returns "Hello World" regardless of arguments.',
     examples: [{ input: 'createHelloWorld()()', output: '"Hello World"' }],
@@ -217,7 +209,7 @@ const PROBLEM_DETAILS = {
   },
 }
 
-function buildTemplates() {
+function buildTemplates(): ProblemTemplate {
   return {
     cpp: `// JavaScript-first track. Switch to JS tab for official signature.\nint main() { return 0; }`,
     java: `// JavaScript-first track. Switch to JS tab for official signature.\nclass Solution { public static void main(String[] args) {} }`,
@@ -226,7 +218,7 @@ function buildTemplates() {
   }
 }
 
-const SEEDED_PROBLEMS = QUESTION_TITLES.map((title, index) => {
+export const SEEDED_PROBLEMS: SeededProblem[] = QUESTION_TITLES.map((title, index) => {
   const details = PROBLEM_DETAILS[title]
 
   return {
@@ -241,7 +233,3 @@ const SEEDED_PROBLEMS = QUESTION_TITLES.map((title, index) => {
     templates: buildTemplates(),
   }
 })
-
-module.exports = {
-  SEEDED_PROBLEMS,
-}

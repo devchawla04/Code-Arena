@@ -1,40 +1,110 @@
-import { useEffect, useMemo, useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
-import { useAuth } from './hooks/useAuth'
-import { Signup, Signin } from './pages/Auth'
-import { problemsAPI } from './services/api'
+import { useEffect, useMemo, useState } from 'react'
+import { BrowserRouter as Router, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import AppFooter from './components/AppFooter'
+import { useAuth } from './hooks/useAuth'
+import { Signin, Signup } from './pages/Auth'
+import { problemsAPI } from './services/api'
+import type { EvaluationResult, Problem, SubmissionStatus } from './types'
 import './App.css'
 
-const LANGUAGE_OPTIONS = [
+type LanguageOption = {
+  label: string
+  value: 'cpp' | 'java' | 'python' | 'javascript'
+  monaco: string
+}
+
+const LANGUAGE_OPTIONS: LanguageOption[] = [
   { label: 'C++', value: 'cpp', monaco: 'cpp' },
   { label: 'Java', value: 'java', monaco: 'java' },
   { label: 'Python', value: 'python', monaco: 'python' },
   { label: 'JavaScript', value: 'javascript', monaco: 'javascript' },
 ]
 
-function getStarterCode(problems, problemId, language) {
+const LOCAL_FALLBACK_PROBLEMS: Problem[] = [
+  {
+    id: 1,
+    title: 'Two Sum',
+    difficulty: 'Easy',
+    acceptance: 'N/A',
+    tags: ['Array', 'Hash Table'],
+    statement: 'Given an array of integers nums and an integer target, return indices of the two numbers that add up to target.',
+    examples: [{ input: 'nums = [2,7,11,15], target = 9', output: '[0,1]' }],
+    constraints: ['2 <= nums.length <= 10^4', '-10^9 <= nums[i] <= 10^9'],
+    templates: {
+      cpp: 'class Solution { public: vector<int> twoSum(vector<int>& nums, int target) { return {}; } };',
+      java: 'class Solution { public int[] twoSum(int[] nums, int target) { return new int[]{}; } }',
+      python: 'class Solution:\n    def twoSum(self, nums, target):\n        return []',
+      javascript:
+        '/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(nums, target) {\n  // TODO\n};',
+    },
+  },
+  {
+    id: 2,
+    title: 'Valid Parentheses',
+    difficulty: 'Easy',
+    acceptance: 'N/A',
+    tags: ['String', 'Stack'],
+    statement: 'Given a string s containing just the characters ()[]{} determine if the input string is valid.',
+    examples: [{ input: 's = "()[]{}"', output: 'true' }],
+    constraints: ['1 <= s.length <= 10^4'],
+    templates: {
+      cpp: 'class Solution { public: bool isValid(string s) { return false; } };',
+      java: 'class Solution { public boolean isValid(String s) { return false; } }',
+      python: 'class Solution:\n    def isValid(self, s):\n        return False',
+      javascript:
+        '/**\n * @param {string} s\n * @return {boolean}\n */\nvar isValid = function(s) {\n  // TODO\n};',
+    },
+  },
+  {
+    id: 3,
+    title: 'Longest Substring Without Repeating Characters',
+    difficulty: 'Medium',
+    acceptance: 'N/A',
+    tags: ['Hash Table', 'String', 'Sliding Window'],
+    statement: 'Given a string s, find the length of the longest substring without repeating characters.',
+    examples: [{ input: 's = "abcabcbb"', output: '3' }],
+    constraints: ['0 <= s.length <= 5 * 10^4'],
+    templates: {
+      cpp: 'class Solution { public: int lengthOfLongestSubstring(string s) { return 0; } };',
+      java: 'class Solution { public int lengthOfLongestSubstring(String s) { return 0; } }',
+      python: 'class Solution:\n    def lengthOfLongestSubstring(self, s):\n        return 0',
+      javascript:
+        '/**\n * @param {string} s\n * @return {number}\n */\nvar lengthOfLongestSubstring = function(s) {\n  // TODO\n};',
+    },
+  },
+]
+
+function getStarterCode(problems: Problem[], problemId: number, language: string) {
   const problem = problems.find((item) => item.id === problemId)
-  return problem?.templates?.[language] ?? ''
+  return problem?.templates?.[language as keyof Problem['templates']] ?? ''
 }
 
-function getDifficultyClass(difficulty) {
+function getDifficultyClass(difficulty: string) {
   if (difficulty === 'Easy') return 'difficulty-easy'
   if (difficulty === 'Medium') return 'difficulty-medium'
   return 'difficulty-hard'
 }
 
+type ApiError = {
+  response?: {
+    data?: {
+      error?: string
+    }
+  }
+}
+
 function ProblemBoard() {
-  const [problems, setProblems] = useState([])
+  const [problems, setProblems] = useState<Problem[]>([])
   const [loadingProblems, setLoadingProblems] = useState(true)
-  const [selectedProblemId, setSelectedProblemId] = useState(null)
-  const [selectedLanguage, setSelectedLanguage] = useState('javascript')
-  const [solutions, setSolutions] = useState({})
-  const [result, setResult] = useState(null)
+  const [problemLoadError, setProblemLoadError] = useState<string | null>(null)
+  const [selectedProblemId, setSelectedProblemId] = useState<number | null>(null)
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption['value']>('javascript')
+  const [solutions, setSolutions] = useState<Record<number, Record<string, string>>>({})
+  const [result, setResult] = useState<EvaluationResult | null>(null)
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [editorNonce, setEditorNonce] = useState(0)
-  const [statusByProblem, setStatusByProblem] = useState({})
+  const [statusByProblem, setStatusByProblem] = useState<Record<string, SubmissionStatus>>({})
   const { user, token, logout } = useAuth()
   const navigate = useNavigate()
   const submitLocked = !token
@@ -50,13 +120,13 @@ function ProblemBoard() {
     return saved ?? getStarterCode(problems, selectedProblem.id, selectedLanguage)
   }, [problems, selectedLanguage, selectedProblem, solutions])
 
-  const openProblem = (problemId) => {
+  const openProblem = (problemId: number) => {
     setSelectedProblemId(problemId)
     setResult(null)
     setEditorNonce((previous) => previous + 1)
   }
 
-  const updateCode = (newCode) => {
+  const updateCode = (newCode: string | undefined) => {
     if (!selectedProblem) return
 
     setSolutions((previous) => ({
@@ -68,7 +138,7 @@ function ProblemBoard() {
     }))
   }
 
-  const changeLanguage = (language) => {
+  const changeLanguage = (language: LanguageOption['value']) => {
     setSelectedLanguage(language)
     if (!selectedProblem) return
 
@@ -80,7 +150,7 @@ function ProblemBoard() {
         ...previous,
         [selectedProblem.id]: {
           ...problemSolutions,
-            [language]: getStarterCode(problems, selectedProblem.id, language),
+          [language]: getStarterCode(problems, selectedProblem.id, language),
         },
       }
     })
@@ -101,7 +171,7 @@ function ProblemBoard() {
     setEditorNonce((previous) => previous + 1)
   }
 
-  const evaluate = async (type) => {
+  const evaluate = async (type: EvaluationResult['type']) => {
     if (!selectedProblem) return
 
     if (type === 'submit' && !token) {
@@ -148,18 +218,18 @@ function ProblemBoard() {
           : await problemsAPI.submitCode(selectedProblem.id, normalizedCurrent, selectedLanguage)
 
       const data = response.data
-        if (type === 'submit' && data.status === 'Accepted') {
-          setStatusByProblem((previous) => ({
-            ...previous,
-            [String(selectedProblem.id)]: {
-              problemId: selectedProblem.id,
-              solved: true,
-              submissions: (previous[String(selectedProblem.id)]?.submissions ?? 0) + 1,
-              lastStatus: data.status,
-              lastSubmittedAt: new Date().toISOString(),
-            },
-          }))
-        }
+      if (type === 'submit' && data.status === 'Accepted') {
+        setStatusByProblem((previous) => ({
+          ...previous,
+          [String(selectedProblem.id)]: {
+            problemId: selectedProblem.id,
+            solved: true,
+            submissions: (previous[String(selectedProblem.id)]?.submissions ?? 0) + 1,
+            lastStatus: data.status,
+            lastSubmittedAt: new Date().toISOString(),
+          },
+        }))
+      }
       setResult({
         type,
         status: data.status,
@@ -172,6 +242,7 @@ function ProblemBoard() {
         reason: data.error || '',
       })
     } catch (error) {
+      const apiError = error as ApiError
       setResult({
         type,
         status: 'Execution Error',
@@ -181,7 +252,7 @@ function ProblemBoard() {
         title: selectedProblem.title,
         language: LANGUAGE_OPTIONS.find((option) => option.value === selectedLanguage)?.label,
         timestamp: new Date().toLocaleTimeString(),
-        reason: error.response?.data?.error || 'Failed to execute code. Try again.',
+        reason: apiError.response?.data?.error || 'Failed to execute code. Try again.',
       })
     } finally {
       setIsEvaluating(false)
@@ -193,18 +264,11 @@ function ProblemBoard() {
     navigate('/signin')
   }
 
-  const goToSignin = () => {
-    navigate('/signin')
-  }
-
-  const goToSignup = () => {
-    navigate('/signup')
-  }
-
   useEffect(() => {
     const loadProblems = async () => {
       try {
         setLoadingProblems(true)
+        setProblemLoadError(null)
         const response = await problemsAPI.getProblems()
         const nextProblems = (response.data?.problems ?? []).map((problem) => ({
           ...problem,
@@ -212,7 +276,9 @@ function ProblemBoard() {
         }))
         setProblems(nextProblems)
       } catch {
-        setProblems([])
+        // Keep the app usable even when backend is not running.
+        setProblems(LOCAL_FALLBACK_PROBLEMS)
+        setProblemLoadError('Backend is unreachable. Showing local practice set.')
       } finally {
         setLoadingProblems(false)
       }
@@ -273,10 +339,10 @@ function ProblemBoard() {
               </>
             ) : (
               <>
-                <button className="ghost-btn" onClick={goToSignin}>
+                <button className="ghost-btn" onClick={() => navigate('/signin')}>
                   Sign In
                 </button>
-                <button className="submit-btn" onClick={goToSignup}>
+                <button className="submit-btn" onClick={() => navigate('/signup')}>
                   Sign Up
                 </button>
               </>
@@ -285,6 +351,21 @@ function ProblemBoard() {
         </header>
 
         <section className="problem-table">
+          {problemLoadError && (
+            <div
+              style={{
+                margin: '0 0 14px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: '1px solid rgba(234, 179, 8, 0.35)',
+                background: 'rgba(234, 179, 8, 0.08)',
+                color: '#facc15',
+                fontSize: '0.9rem',
+              }}
+            >
+              {problemLoadError}
+            </div>
+          )}
           <div className="table-head">
             <span>Title</span>
             <span>Difficulty</span>
@@ -292,12 +373,19 @@ function ProblemBoard() {
             <span>Topics</span>
           </div>
 
-          {problems.map((problem) => (
-            <button
-              key={problem.id}
-              className="table-row"
-              onClick={() => openProblem(problem.id)}
+          {!problems.length && (
+            <div
+              style={{
+                padding: '16px',
+                color: '#9eb0cb',
+              }}
             >
+              No problems available right now.
+            </div>
+          )}
+
+          {problems.map((problem) => (
+            <button key={problem.id} className="table-row" onClick={() => openProblem(problem.id)}>
               <span className="title-cell">
                 {problem.id}. {problem.title}
                 {statusByProblem[String(problem.id)]?.solved && (
@@ -322,7 +410,9 @@ function ProblemBoard() {
           Back to Problems
         </button>
         <div>
-          <h2>{selectedProblem.id}. {selectedProblem.title}</h2>
+          <h2>
+            {selectedProblem.id}. {selectedProblem.title}
+          </h2>
           <p className={getDifficultyClass(selectedProblem.difficulty)}>{selectedProblem.difficulty}</p>
         </div>
         {user ? (
@@ -331,10 +421,10 @@ function ProblemBoard() {
           </button>
         ) : (
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="ghost-btn" onClick={goToSignin}>
+            <button className="ghost-btn" onClick={() => navigate('/signin')}>
               Sign In
             </button>
-            <button className="submit-btn" onClick={goToSignup}>
+            <button className="submit-btn" onClick={() => navigate('/signup')}>
               Sign Up
             </button>
           </div>
@@ -370,7 +460,7 @@ function ProblemBoard() {
           <div className="editor-toolbar">
             <select
               value={selectedLanguage}
-              onChange={(event) => changeLanguage(event.target.value)}
+              onChange={(event) => changeLanguage(event.target.value as LanguageOption['value'])}
             >
               {LANGUAGE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -446,7 +536,19 @@ function App() {
   const { loading } = useAuth()
 
   if (loading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: '#9eb0cb' }}>Loading...</div>
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          color: '#9eb0cb',
+        }}
+      >
+        Loading...
+      </div>
+    )
   }
 
   return (

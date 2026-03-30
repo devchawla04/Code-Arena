@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
 import AppFooter from '../components/AppFooter'
+import { useAuth } from '../hooks/useAuth'
 import './Auth.css'
+
+type AuthError = {
+  error?: string
+}
 
 export function Signup() {
   const [email, setEmail] = useState('')
@@ -13,7 +17,7 @@ export function Signup() {
   const { signup } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
     setLoading(true)
@@ -22,7 +26,8 @@ export function Signup() {
       await signup(email, password, fullName)
       navigate('/problems')
     } catch (err) {
-      setError(err.error || 'Signup failed')
+      const parsedError = err as AuthError
+      setError(parsedError.error || 'Signup failed')
     } finally {
       setLoading(false)
     }
@@ -103,7 +108,7 @@ export function Signin() {
   const { signin } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
     setLoading(true)
@@ -112,7 +117,8 @@ export function Signin() {
       await signin(email, password)
       navigate('/problems')
     } catch (err) {
-      setError(err.error || 'Signin failed')
+      const parsedError = err as AuthError
+      setError(parsedError.error || 'Signin failed')
     } finally {
       setLoading(false)
     }

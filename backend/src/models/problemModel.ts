@@ -1,6 +1,23 @@
-const mongoose = require('mongoose')
+import mongoose from 'mongoose'
 
-const problemSchema = new mongoose.Schema(
+export type ProblemDocument = {
+  problemId: number
+  title: string
+  difficulty: 'Easy' | 'Medium' | 'Hard'
+  acceptance: string
+  tags: string[]
+  statement: string
+  examples: Array<{ input: string; output: string }>
+  constraints: string[]
+  templates: {
+    cpp: string
+    java: string
+    python: string
+    javascript: string
+  }
+}
+
+const problemSchema = new mongoose.Schema<ProblemDocument>(
   {
     problemId: {
       type: Number,
@@ -55,8 +72,4 @@ const problemSchema = new mongoose.Schema(
   },
 )
 
-const Problem = mongoose.model('Problem', problemSchema)
-
-module.exports = {
-  Problem,
-}
+export const Problem = mongoose.model<ProblemDocument>('Problem', problemSchema)

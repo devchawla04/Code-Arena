@@ -1,22 +1,37 @@
-import React, { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { authAPI } from '../services/api'
-import { AuthContext } from './authContext'
+import type { AuthResponse, User } from '../types'
+import { AuthContext } from './AuthContextValue'
 
-export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
-  const [user, setUser] = useState(() => {
+type Props = {
+  children: ReactNode
+}
+
+type ApiError = {
+  response?: {
+    data?: {
+      error?: string
+    }
+  }
+  message?: string
+}
+
+export function AuthProvider({ children }: Props) {
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
+  const [user, setUser] = useState<User | null>(() => {
     const storedUser = localStorage.getItem('user')
     if (!storedUser) return null
     try {
-      return JSON.parse(storedUser)
+      return JSON.parse(storedUser) as User
     } catch {
       localStorage.removeItem('user')
       return null
     }
   })
+
   const loading = false
 
-  const signup = async (email, password, fullName) => {
+  const signup = async (email: string, password: string, fullName: string): Promise<AuthResponse> => {
     try {
       const response = await authAPI.signup(email, password, fullName)
       const { token: newToken, user: userData } = response.data
@@ -26,11 +41,12 @@ export function AuthProvider({ children }) {
       setUser(userData)
       return response.data
     } catch (error) {
-      throw error.response?.data || error.message
+      const parsedError = error as ApiError
+      throw parsedError.response?.data || parsedError.message || 'Signup failed'
     }
   }
 
-  const signin = async (email, password) => {
+  const signin = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       const response = await authAPI.signin(email, password)
       const { token: newToken, user: userData } = response.data
@@ -40,7 +56,8 @@ export function AuthProvider({ children }) {
       setUser(userData)
       return response.data
     } catch (error) {
-      throw error.response?.data || error.message
+      const parsedError = error as ApiError
+      throw parsedError.response?.data || parsedError.message || 'Signin failed'
     }
   }
 

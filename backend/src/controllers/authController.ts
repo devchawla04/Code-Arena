@@ -1,10 +1,16 @@
-const jwt = require('jsonwebtoken')
-const { JWT_SECRET } = require('../middlewares/authMiddleware')
-const { createUser, findUserByEmail, validatePassword } = require('../models/userModel')
+import type { Request, Response } from 'express'
+import jwt from 'jsonwebtoken'
+import { JWT_SECRET } from '../middlewares/authMiddleware'
+import { createUser, findUserByEmail, validatePassword } from '../models/userModel'
+import type { AuthenticatedRequest } from '../types/auth'
 
-async function signup(req, res) {
+export async function signup(req: Request, res: Response) {
   try {
-    const { email, password, fullName } = req.body
+    const { email, password, fullName } = req.body as {
+      email?: string
+      password?: string
+      fullName?: string
+    }
 
     if (!email || !password || !fullName) {
       return res.status(400).json({ error: 'Email, password, and full name are required' })
@@ -20,11 +26,11 @@ async function signup(req, res) {
     }
 
     const user = await createUser(email, password, fullName)
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
+    const token = jwt.sign({ userId: String(user._id), email: user.email }, JWT_SECRET, {
       expiresIn: '7d',
     })
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'User registered successfully',
       token,
       user: {
@@ -34,13 +40,14 @@ async function signup(req, res) {
       },
     })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    const message = error instanceof Error ? error.message : 'Signup failed'
+    return res.status(500).json({ error: message })
   }
 }
 
-async function signin(req, res) {
+export async function signin(req: Request, res: Response) {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body as { email?: string; password?: string }
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' })
@@ -56,11 +63,11 @@ async function signin(req, res) {
       return res.status(401).json({ error: 'Invalid email or password' })
     }
 
-    const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
+    const token = jwt.sign({ userId: String(user._id), email: user.email }, JWT_SECRET, {
       expiresIn: '7d',
     })
 
-    res.status(200).json({
+    return res.status(200).json({
       message: 'Sign in successful',
       token,
       user: {
@@ -70,23 +77,19 @@ async function signin(req, res) {
       },
     })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    const message = error instanceof Error ? error.message : 'Signin failed'
+    return res.status(500).json({ error: message })
   }
 }
 
-async function getProfile(req, res) {
+export async function getProfile(req: AuthenticatedRequest, res: Response) {
   try {
-    res.status(200).json({
+    return res.status(200).json({
       message: 'User profile retrieved',
       user: req.user,
     })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    const message = error instanceof Error ? error.message : 'Failed to load profile'
+    return res.status(500).json({ error: message })
   }
-}
-
-module.exports = {
-  signup,
-  signin,
-  getProfile,
 }

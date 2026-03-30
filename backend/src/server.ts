@@ -1,9 +1,9 @@
-const express = require('express')
-const cors = require('cors')
-const dotenv = require('dotenv')
-const connectDB = require('./config/database')
-const authRoutes = require('./routes/authRoutes')
-const problemRoutes = require('./routes/problemRoutes')
+import cors from 'cors'
+import dotenv from 'dotenv'
+import express from 'express'
+import connectDB from './config/database'
+import authRoutes from './routes/authRoutes'
+import problemRoutes from './routes/problemRoutes'
 
 dotenv.config()
 
@@ -13,7 +13,7 @@ const PORT = Number(process.env.PORT) || 5001
 app.use(cors())
 app.use(express.json())
 
-connectDB().catch((error) => {
+connectDB().catch((error: unknown) => {
   console.error('Failed to connect to MongoDB:', error)
 })
 
